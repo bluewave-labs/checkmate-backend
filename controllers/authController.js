@@ -9,7 +9,7 @@ import {
 } from "../validation/joi.js";
 import logger from "../utils/logger.js";
 import jwt from "jsonwebtoken";
-import { getTokenFromHeaders, tokenType } from "../utils/utils.js";
+import { getTokenFromHeaders } from "../utils/utils.js";
 import crypto from "crypto";
 import { handleValidationError, handleError } from "./controllerUtils.js";
 const SERVICE_NAME = "authController";
@@ -27,22 +27,15 @@ class AuthController {
 	 * Creates and returns JWT token with an arbitrary payload
 	 * @function
 	 * @param {Object} payload
-	 * @param {tokenType} typeOfToken - Whether to generate refresh token with long TTL or access token with short TTL.
 	 * @param {Object} appSettings
 	 * @returns {String}
 	 * @throws {Error}
 	 */
-	issueToken = (payload, typeOfToken, appSettings) => {
+	issueToken = (payload, appSettings) => {
 		try {
-			const tokenTTL =
-				typeOfToken === tokenType.REFRESH_TOKEN
-					? (appSettings?.refreshTokenTTL ?? "7d")
-					: (appSettings?.jwtTTL ?? "2h");
-			const tokenSecret =
-				typeOfToken === tokenType.REFRESH_TOKEN
-					? appSettings?.refreshTokenSecret
-					: appSettings?.jwtSecret;
-			const payloadData = typeOfToken === tokenType.REFRESH_TOKEN ? {} : payload;
+			const tokenTTL = appSettings?.jwtTTL ?? "2h";
+			const tokenSecret = appSettings?.jwtSecret;
+			const payloadData = payload;
 
 			return jwt.sign(payloadData, tokenSecret, { expiresIn: tokenTTL });
 		} catch (error) {
@@ -96,8 +89,7 @@ class AuthController {
 
 			const appSettings = await this.settingsService.getSettings();
 
-			const token = this.issueToken(userForToken, tokenType.ACCESS_TOKEN, appSettings);
-			const refreshToken = this.issueToken({}, tokenType.REFRESH_TOKEN, appSettings);
+			const token = this.issueToken(userForToken, appSettings);
 
 			this.emailService
 				.buildAndSendEmail(
@@ -117,7 +109,7 @@ class AuthController {
 
 			res.success({
 				msg: this.stringService.authCreateUser,
-				data: { user: newUser, token: token, refreshToken: refreshToken },
+				data: { user: newUser, token: token },
 			});
 		} catch (error) {
 			next(handleError(error, SERVICE_NAME, "registerController"));
@@ -166,12 +158,7 @@ class AuthController {
 
 			// Happy path, return token
 			const appSettings = await this.settingsService.getSettings();
-			const token = this.issueToken(
-				userWithoutPassword,
-				tokenType.ACCESS_TOKEN,
-				appSettings
-			);
-			const refreshToken = this.issueToken({}, tokenType.REFRESH_TOKEN, appSettings);
+			const token = this.issueToken(userWithoutPassword, appSettings);
 			// reset avatar image
 			userWithoutPassword.avatarImage = user.avatarImage;
 
@@ -180,7 +167,6 @@ class AuthController {
 				data: {
 					user: userWithoutPassword,
 					token: token,
-					refreshToken: refreshToken,
 				},
 			});
 		} catch (error) {
@@ -189,68 +175,6 @@ class AuthController {
 		}
 	};
 
-	/**
-	 * Generates new auth token if the refresh token is valid
-	 * @async
-	 * @param {Express.Request} req - The Express request object.
-	 * @property {Object} req.headers - The parameter of the request.
-	 * @param {Express.Response} res - The Express response object.
-	 * @param {function} next - The next middleware function.
-	 * @returns {Object} The response object with a success status, a message indicating new auth token is generated.
-	 * @throws {Error} If there is an error during the process such as any of the token is not received
-	 */
-	refreshAuthToken = async (req, res, next) => {
-
-		try {
-			// check for refreshToken
-			const refreshToken = req.headers["x-refresh-token"];
-
-			if (!refreshToken) {
-				// No refresh token provided
-				const error = new Error(this.stringService.noRefreshToken);
-				error.status = 401;
-				error.service = SERVICE_NAME;
-				error.method = "refreshAuthToken";
-				return next(error);
-			}
-
-			// Verify refresh token
-			const appSettings = await this.settingsService.getSettings();
-			const { refreshTokenSecret } = appSettings;
-			jwt.verify(refreshToken, refreshTokenSecret, async (refreshErr, refreshDecoded) => {
-				if (refreshErr) {
-					// Invalid or expired refresh token, trigger logout
-					const errorMessage =
-						refreshErr.name === "TokenExpiredError"
-							? this.stringService.expiredAuthToken
-							: this.stringService.invalidAuthToken;
-					const error = new Error(errorMessage);
-					error.status = 401;
-					error.service = SERVICE_NAME;
-					return next(error);
-				}
-			});
-			// Refresh token is valid and unexpired, generate new access token
-			const oldAuthToken = getTokenFromHeaders(req.headers);
-			const { jwtSecret } = await this.settingsService.getSettings();
-			const payloadData = jwt.verify(oldAuthToken, jwtSecret, { ignoreExpiration: true });
-			// delete old token related data
-			delete payloadData.iat;
-			delete payloadData.exp;
-			const newAuthToken = this.issueToken(
-				payloadData,
-				tokenType.ACCESS_TOKEN,
-				appSettings
-			);
-
-			return res.success({
-				msg: this.stringService.authTokenRefreshed,
-				data: { user: payloadData, token: newAuthToken, refreshToken: refreshToken },
-			});
-		} catch (error) {
-			next(handleError(error, SERVICE_NAME, "refreshAuthToken"));
-		}
-	};
 	/**
 	 * Edits a user's information. If the user wants to change their password, the current password is checked before updating to the new password.
 	 * @async
@@ -266,7 +190,6 @@ class AuthController {
 	 * @throws {Error} If there is an error during the process, especially if there is a validation error (422), the user is unauthorized (401), or the password is incorrect (403).
 	 */
 	editUser = async (req, res, next) => {
-
 		try {
 			await editUserParamValidation.validateAsync(req.params);
 			await editUserBodyValidation.validateAsync(req.body);
@@ -442,7 +365,7 @@ class AuthController {
 		try {
 			const user = await this.db.resetPassword(req, res);
 			const appSettings = await this.settingsService.getSettings();
-			const token = this.issueToken(user._doc, tokenType.ACCESS_TOKEN, appSettings);
+			const token = this.issueToken(user._doc, appSettings);
 
 			return res.success({
 				msg: this.stringService.authResetPassword,

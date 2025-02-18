@@ -2,7 +2,6 @@ import {
 	issueToken,
 	registerUser,
 	loginUser,
-	refreshAuthToken,
 	editUser,
 	checkSuperadminExists,
 	requestRecovery,
@@ -14,18 +13,17 @@ import {
 import jwt from "jsonwebtoken";
 import { errorMessages, successMessages } from "../../utils/messages.js";
 import sinon from "sinon";
-import { getTokenFromHeaders, tokenType } from "../../utils/utils.js";
+import { tokenType } from "../../utils/utils.js";
 import logger from "../../utils/logger.js";
-import e from "cors";
 
-describe("Auth Controller - issueToken", function() {
+describe("Auth Controller - issueToken", function () {
 	let stub;
 
-	afterEach(function() {
+	afterEach(function () {
 		sinon.restore(); // Restore stubs after each test
 	});
 
-	it("should reject with an error if jwt.sign fails", function() {
+	it("should reject with an error if jwt.sign fails", function () {
 		const error = new Error("jwt.sign error");
 		stub = sinon.stub(jwt, "sign").throws(error);
 		const payload = { id: "123" };
@@ -35,7 +33,7 @@ describe("Auth Controller - issueToken", function() {
 		);
 	});
 
-	it("should return a token if jwt.sign is successful and appSettings.jwtTTL is not defined", function() {
+	it("should return a token if jwt.sign is successful and appSettings.jwtTTL is not defined", function () {
 		const payload = { id: "123" };
 		const appSettings = { jwtSecret: "my_secret" };
 		const expectedToken = "mockToken";
@@ -45,7 +43,7 @@ describe("Auth Controller - issueToken", function() {
 		expect(token).to.equal(expectedToken);
 	});
 
-	it("should return a token if jwt.sign is successful and appSettings.jwtTTL is defined", function() {
+	it("should return a token if jwt.sign is successful and appSettings.jwtTTL is defined", function () {
 		const payload = { id: "123" };
 		const appSettings = { jwtSecret: "my_secret", jwtTTL: "1s" };
 		const expectedToken = "mockToken";
@@ -55,7 +53,7 @@ describe("Auth Controller - issueToken", function() {
 		expect(token).to.equal(expectedToken);
 	});
 
-	it("should return a refresh token if jwt.sign is successful and appSettings.refreshTokenTTL is not defined", function() {
+	it("should return a refresh token if jwt.sign is successful and appSettings.refreshTokenTTL is not defined", function () {
 		const payload = {};
 		const appSettings = { refreshTokenSecret: "my_refresh_secret" };
 		const expectedToken = "mockRefreshToken";
@@ -65,7 +63,7 @@ describe("Auth Controller - issueToken", function() {
 		expect(token).to.equal(expectedToken);
 	});
 
-	it("should return a refresh token if jwt.sign is successful and appSettings.refreshTokenTTL is defined", function() {
+	it("should return a refresh token if jwt.sign is successful and appSettings.refreshTokenTTL is defined", function () {
 		const payload = {};
 		const appSettings = {
 			refreshTokenSecret: "my_refresh_secret",
@@ -79,10 +77,10 @@ describe("Auth Controller - issueToken", function() {
 	});
 });
 
-describe("Auth Controller - registerUser", function() {
+describe("Auth Controller - registerUser", function () {
 	let req, res, next;
 
-	beforeEach(function() {
+	beforeEach(function () {
 		req = {
 			body: {
 				firstName: "firstname",
@@ -118,25 +116,25 @@ describe("Auth Controller - registerUser", function() {
 		sinon.stub(logger, "error");
 	});
 
-	afterEach(function() {
+	afterEach(function () {
 		sinon.restore();
 	});
 
-	it("should reject with an error if body validation fails", async function() {
+	it("should reject with an error if body validation fails", async function () {
 		req.body = {};
 		await registerUser(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].status).to.equal(422);
 	});
 
-	it("should reject with an error if checkSuperadmin fails", async function() {
+	it("should reject with an error if checkSuperadmin fails", async function () {
 		req.db.checkSuperadmin.throws(new Error("checkSuperadmin error"));
 		await registerUser(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].message).to.equal("checkSuperadmin error");
 	});
 
-	it("should reject with an error if getInviteTokenAndDelete fails", async function() {
+	it("should reject with an error if getInviteTokenAndDelete fails", async function () {
 		req.db.checkSuperadmin.returns(true);
 		req.db.getInviteTokenAndDelete.throws(new Error("getInviteTokenAndDelete error"));
 		await registerUser(req, res, next);
@@ -144,7 +142,7 @@ describe("Auth Controller - registerUser", function() {
 		expect(next.firstCall.args[0].message).to.equal("getInviteTokenAndDelete error");
 	});
 
-	it("should reject with an error if updateAppSettings fails", async function() {
+	it("should reject with an error if updateAppSettings fails", async function () {
 		req.db.checkSuperadmin.returns(false);
 		req.db.updateAppSettings.throws(new Error("updateAppSettings error"));
 		await registerUser(req, res, next);
@@ -152,7 +150,7 @@ describe("Auth Controller - registerUser", function() {
 		expect(next.firstCall.args[0].message).to.equal("updateAppSettings error");
 	});
 
-	it("should reject with an error if insertUser fails", async function() {
+	it("should reject with an error if insertUser fails", async function () {
 		req.db.checkSuperadmin.resolves(false);
 		req.db.updateAppSettings.resolves();
 		req.db.insertUser.rejects(new Error("insertUser error"));
@@ -161,7 +159,7 @@ describe("Auth Controller - registerUser", function() {
 		expect(next.firstCall.args[0].message).to.equal("insertUser error");
 	});
 
-	it("should reject with an error if settingsService.getSettings fails", async function() {
+	it("should reject with an error if settingsService.getSettings fails", async function () {
 		req.db.checkSuperadmin.resolves(false);
 		req.db.updateAppSettings.resolves();
 		req.db.insertUser.resolves({ _id: "123" });
@@ -173,7 +171,7 @@ describe("Auth Controller - registerUser", function() {
 		expect(next.firstCall.args[0].message).to.equal("settingsService.getSettings error");
 	});
 
-	it("should log an error if emailService.buildAndSendEmail fails", async function() {
+	it("should log an error if emailService.buildAndSendEmail fails", async function () {
 		req.db.checkSuperadmin.resolves(false);
 		req.db.updateAppSettings.resolves();
 		req.db.insertUser.returns({ _id: "123" });
@@ -187,7 +185,7 @@ describe("Auth Controller - registerUser", function() {
 		expect(logger.error.firstCall.args[0].message).to.equal("emailService error");
 	});
 
-	it("should return a success message and data if all operations are successful", async function() {
+	it("should return a success message and data if all operations are successful", async function () {
 		const user = { _id: "123" };
 		req.db.checkSuperadmin.resolves(false);
 		req.db.updateAppSettings.resolves();
@@ -209,7 +207,7 @@ describe("Auth Controller - registerUser", function() {
 		expect(next.notCalled).to.be.true;
 	});
 
-	it("should return a success message and data if all operations are successful and superAdmin true", async function() {
+	it("should return a success message and data if all operations are successful and superAdmin true", async function () {
 		const user = { _id: "123" };
 		req.db.checkSuperadmin.resolves(true);
 		req.db.updateAppSettings.resolves();
@@ -232,10 +230,10 @@ describe("Auth Controller - registerUser", function() {
 	});
 });
 
-describe("Auth Controller - loginUser", function() {
+describe("Auth Controller - loginUser", function () {
 	let req, res, next, user;
 
-	beforeEach(function() {
+	beforeEach(function () {
 		req = {
 			body: { email: "test@example.com", password: "Password123!" },
 			db: {
@@ -261,21 +259,21 @@ describe("Auth Controller - loginUser", function() {
 		};
 	});
 
-	it("should reject with an error if validation fails", async function() {
+	it("should reject with an error if validation fails", async function () {
 		req.body = {};
 		await loginUser(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].status).to.equal(422);
 	});
 
-	it("should reject with an error if getUserByEmail fails", async function() {
+	it("should reject with an error if getUserByEmail fails", async function () {
 		req.db.getUserByEmail.rejects(new Error("getUserByEmail error"));
 		await loginUser(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].message).to.equal("getUserByEmail error");
 	});
 
-	it("should login user successfully", async function() {
+	it("should login user successfully", async function () {
 		req.db.getUserByEmail.resolves(user);
 		user.comparePassword.resolves(true);
 		await loginUser(req, res, next);
@@ -297,7 +295,7 @@ describe("Auth Controller - loginUser", function() {
 		expect(next.notCalled).to.be.true;
 	});
 
-	it("should reject a user with an incorrect password", async function() {
+	it("should reject a user with an incorrect password", async function () {
 		req.body = {
 			email: "test@test.com",
 			password: "Password123!",
@@ -312,10 +310,10 @@ describe("Auth Controller - loginUser", function() {
 	});
 });
 
-describe("Auth Controller - refreshAuthToken", function() {
+describe("Auth Controller - refreshAuthToken", function () {
 	let req, res, next, issueTokenStub;
 
-	beforeEach(function() {
+	beforeEach(function () {
 		req = {
 			headers: {
 				"x-refresh-token": "valid_refresh_token",
@@ -339,11 +337,11 @@ describe("Auth Controller - refreshAuthToken", function() {
 		sinon.replace({ issueToken }, "issueToken", issueTokenStub);
 	});
 
-	afterEach(function() {
+	afterEach(function () {
 		sinon.restore();
 	});
 
-	it("should reject if no refresh token is provided", async function() {
+	it("should reject if no refresh token is provided", async function () {
 		delete req.headers["x-refresh-token"];
 		await refreshAuthToken(req, res, next);
 
@@ -352,7 +350,7 @@ describe("Auth Controller - refreshAuthToken", function() {
 		expect(next.firstCall.args[0].status).to.equal(401);
 	});
 
-	it("should reject if the refresh token is invalid", async function() {
+	it("should reject if the refresh token is invalid", async function () {
 		jwt.verify.yields(new Error("invalid token"));
 		await refreshAuthToken(req, res, next);
 
@@ -361,7 +359,7 @@ describe("Auth Controller - refreshAuthToken", function() {
 		expect(next.firstCall.args[0].status).to.equal(401);
 	});
 
-	it("should reject if the refresh token is expired", async function() {
+	it("should reject if the refresh token is expired", async function () {
 		const error = new Error("Token expired");
 		error.name = "TokenExpiredError";
 		jwt.verify.yields(error);
@@ -371,7 +369,7 @@ describe("Auth Controller - refreshAuthToken", function() {
 		expect(next.firstCall.args[0].status).to.equal(401);
 	});
 
-	it("should reject if settingsService.getSettings fails", async function() {
+	it("should reject if settingsService.getSettings fails", async function () {
 		req.settingsService.getSettings.rejects(
 			new Error("settingsService.getSettings error")
 		);
@@ -381,7 +379,7 @@ describe("Auth Controller - refreshAuthToken", function() {
 		expect(next.firstCall.args[0].message).to.equal("settingsService.getSettings error");
 	});
 
-	it("should generate a new auth token if the refresh token is valid", async function() {
+	it("should generate a new auth token if the refresh token is valid", async function () {
 		const decodedPayload = { expiresIn: "60" };
 		jwt.verify.callsFake(() => {
 			return decodedPayload;
@@ -403,10 +401,10 @@ describe("Auth Controller - refreshAuthToken", function() {
 	});
 });
 
-describe("Auth Controller - editUser", function() {
+describe("Auth Controller - editUser", function () {
 	let req, res, next, stub, user;
 
-	beforeEach(function() {
+	beforeEach(function () {
 		req = {
 			params: { userId: "123" },
 			body: { password: "Password1!", newPassword: "Password2!" },
@@ -428,40 +426,40 @@ describe("Auth Controller - editUser", function() {
 		stub = sinon.stub(jwt, "verify").returns({ email: "test@example.com" });
 	});
 
-	afterEach(function() {
+	afterEach(function () {
 		sinon.restore();
 		stub.restore();
 	});
 
-	it("should reject with an error if param validation fails", async function() {
+	it("should reject with an error if param validation fails", async function () {
 		req.params = {};
 		await editUser(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].status).to.equal(422);
 	});
 
-	it("should reject with an error if body validation fails", async function() {
+	it("should reject with an error if body validation fails", async function () {
 		req.body = { invalid: 1 };
 		await editUser(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].status).to.equal(422);
 	});
 
-	it("should reject with an error if param.userId !== req.user._id", async function() {
+	it("should reject with an error if param.userId !== req.user._id", async function () {
 		req.params = { userId: "456" };
 		await editUser(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].status).to.equal(401);
 	});
 
-	it("should reject with an error if !req.body.password and getUserByEmail fails", async function() {
+	it("should reject with an error if !req.body.password and getUserByEmail fails", async function () {
 		req.db.getUserByEmail.rejects(new Error("getUserByEmail error"));
 		await editUser(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].message).to.equal("getUserByEmail error");
 	});
 
-	it("should reject with an error if user.comparePassword fails", async function() {
+	it("should reject with an error if user.comparePassword fails", async function () {
 		req.db.getUserByEmail.returns({
 			comparePassword: sinon.stub().rejects(new Error("Bad Password Match")),
 		});
@@ -470,7 +468,7 @@ describe("Auth Controller - editUser", function() {
 		expect(next.firstCall.args[0].message).to.equal("Bad Password Match");
 	});
 
-	it("should reject with an error if user.comparePassword returns false", async function() {
+	it("should reject with an error if user.comparePassword returns false", async function () {
 		req.db.getUserByEmail.returns({
 			comparePassword: sinon.stub().returns(false),
 		});
@@ -482,7 +480,7 @@ describe("Auth Controller - editUser", function() {
 		);
 	});
 
-	it("should edit a user if it receives a proper request", async function() {
+	it("should edit a user if it receives a proper request", async function () {
 		const user = {
 			comparePassword: sinon.stub().resolves(true),
 		};
@@ -504,7 +502,7 @@ describe("Auth Controller - editUser", function() {
 		expect(next.notCalled).to.be.true;
 	});
 
-	it("should edit a user if it receives a proper request and both password fields are undefined", async function() {
+	it("should edit a user if it receives a proper request and both password fields are undefined", async function () {
 		req.body.password = undefined;
 		req.body.newPassword = undefined;
 		req.db.getUserByEmail.resolves(user);
@@ -522,7 +520,7 @@ describe("Auth Controller - editUser", function() {
 		expect(next.notCalled).to.be.true;
 	});
 
-	it("should reject an edit request if password format is incorrect", async function() {
+	it("should reject an edit request if password format is incorrect", async function () {
 		req.body = { password: "bad_password", newPassword: "bad_password" };
 		const user = {
 			comparePassword: sinon.stub().resolves(true),
@@ -536,10 +534,10 @@ describe("Auth Controller - editUser", function() {
 	});
 });
 
-describe("Auth Controller - checkSuperadminExists", function() {
+describe("Auth Controller - checkSuperadminExists", function () {
 	let req, res, next;
 
-	beforeEach(function() {
+	beforeEach(function () {
 		req = {
 			db: {
 				checkSuperadmin: sinon.stub(),
@@ -552,14 +550,14 @@ describe("Auth Controller - checkSuperadminExists", function() {
 		next = sinon.stub();
 	});
 
-	it("should reject with an error if checkSuperadmin fails", async function() {
+	it("should reject with an error if checkSuperadmin fails", async function () {
 		req.db.checkSuperadmin.rejects(new Error("checkSuperadmin error"));
 		await checkSuperadminExists(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].message).to.equal("checkSuperadmin error");
 	});
 
-	it("should return true if a superadmin exists", async function() {
+	it("should return true if a superadmin exists", async function () {
 		req.db.checkSuperadmin.resolves(true);
 		await checkSuperadminExists(req, res, next);
 		expect(res.status.calledWith(200)).to.be.true;
@@ -573,7 +571,7 @@ describe("Auth Controller - checkSuperadminExists", function() {
 		expect(next.notCalled).to.be.true;
 	});
 
-	it("should return false if a superadmin does not exist", async function() {
+	it("should return false if a superadmin does not exist", async function () {
 		req.db.checkSuperadmin.resolves(false);
 		await checkSuperadminExists(req, res, next);
 		expect(res.status.calledWith(200)).to.be.true;
@@ -588,10 +586,10 @@ describe("Auth Controller - checkSuperadminExists", function() {
 	});
 });
 
-describe("Auth Controller - requestRecovery", function() {
+describe("Auth Controller - requestRecovery", function () {
 	let req, res, next;
 
-	beforeEach(function() {
+	beforeEach(function () {
 		req = {
 			body: { email: "test@test.com" },
 			db: {
@@ -612,21 +610,21 @@ describe("Auth Controller - requestRecovery", function() {
 		next = sinon.stub();
 	});
 
-	it("should reject with an error if validation fails", async function() {
+	it("should reject with an error if validation fails", async function () {
 		req.body = {};
 		await requestRecovery(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].status).to.equal(422);
 	});
 
-	it("should reject with an error if getUserByEmail fails", async function() {
+	it("should reject with an error if getUserByEmail fails", async function () {
 		req.db.getUserByEmail.rejects(new Error("getUserByEmail error"));
 		await requestRecovery(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].message).to.equal("getUserByEmail error");
 	});
 
-	it("should throw an error if the user is not found", async function() {
+	it("should throw an error if the user is not found", async function () {
 		req.db.getUserByEmail.resolves(null);
 		await requestRecovery(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
@@ -635,14 +633,14 @@ describe("Auth Controller - requestRecovery", function() {
 		// );
 	});
 
-	it("should throw an error if the email is not provided", async function() {
+	it("should throw an error if the email is not provided", async function () {
 		req.body = {};
 		await requestRecovery(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].status).to.equal(422);
 	});
 
-	it("should return a success message if the email is provided", async function() {
+	it("should return a success message if the email is provided", async function () {
 		const user = { firstName: "John" };
 		const recoveryToken = { token: "recovery-token" };
 		const msgId = "message-id";
@@ -676,10 +674,10 @@ describe("Auth Controller - requestRecovery", function() {
 	});
 });
 
-describe("Auth Controller - validateRecovery", function() {
+describe("Auth Controller - validateRecovery", function () {
 	let req, res, next;
 
-	beforeEach(function() {
+	beforeEach(function () {
 		req = {
 			body: { recoveryToken: "recovery-token" },
 			db: {
@@ -693,21 +691,21 @@ describe("Auth Controller - validateRecovery", function() {
 		next = sinon.stub();
 	});
 
-	it("should reject with an error if validation fails", async function() {
+	it("should reject with an error if validation fails", async function () {
 		req.body = {};
 		await validateRecovery(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].status).to.equal(422);
 	});
 
-	it("should reject with an error if validateRecoveryToken fails", async function() {
+	it("should reject with an error if validateRecoveryToken fails", async function () {
 		req.db.validateRecoveryToken.rejects(new Error("validateRecoveryToken error"));
 		await validateRecovery(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].message).to.equal("validateRecoveryToken error");
 	});
 
-	it("should return a success message if the token is valid", async function() {
+	it("should return a success message if the token is valid", async function () {
 		req.db.validateRecoveryToken.resolves();
 		await validateRecovery(req, res, next);
 		expect(res.status.calledOnceWith(200)).to.be.true;
@@ -721,10 +719,10 @@ describe("Auth Controller - validateRecovery", function() {
 	});
 });
 
-describe("Auth Controller - resetPassword", function() {
+describe("Auth Controller - resetPassword", function () {
 	let req, res, next, newPasswordValidation, handleValidationError, handleError;
 
-	beforeEach(function() {
+	beforeEach(function () {
 		req = {
 			body: {
 				recoveryToken: "recovery-token",
@@ -749,14 +747,14 @@ describe("Auth Controller - resetPassword", function() {
 		handleError = sinon.stub();
 	});
 
-	it("should reject with an error if validation fails", async function() {
+	it("should reject with an error if validation fails", async function () {
 		req.body = { password: "bad_password" };
 		await resetPassword(req, res, next);
 		expect(next.firstCall.args[0]).to.be.an("error");
 		expect(next.firstCall.args[0].status).to.equal(422);
 	});
 
-	it("should reject with an error if resetPassword fails", async function() {
+	it("should reject with an error if resetPassword fails", async function () {
 		const error = new Error("resetPassword error");
 		newPasswordValidation.validateAsync.resolves();
 		req.db.resetPassword.rejects(error);
@@ -765,7 +763,7 @@ describe("Auth Controller - resetPassword", function() {
 		expect(next.firstCall.args[0].message).to.equal("resetPassword error");
 	});
 
-	it("should reset password successfully", async function() {
+	it("should reset password successfully", async function () {
 		const user = { _doc: {} };
 		const appSettings = { jwtSecret: "my_secret" };
 		const token = "token";
@@ -790,10 +788,10 @@ describe("Auth Controller - resetPassword", function() {
 	});
 });
 
-describe("Auth Controller - deleteUser", function() {
+describe("Auth Controller - deleteUser", function () {
 	let req, res, next, handleError;
 
-	beforeEach(function() {
+	beforeEach(function () {
 		req = {
 			headers: {
 				authorization: "Bearer token",
@@ -825,11 +823,11 @@ describe("Auth Controller - deleteUser", function() {
 		handleError = sinon.stub();
 	});
 
-	afterEach(function() {
+	afterEach(function () {
 		sinon.restore();
 	});
 
-	it("should throw an error if user is not found", async function() {
+	it("should throw an error if user is not found", async function () {
 		jwt.decode.returns({ email: "test@example.com" });
 		req.db.getUserByEmail.throws(new Error(errorMessages.DB_USER_NOT_FOUND));
 
@@ -842,7 +840,7 @@ describe("Auth Controller - deleteUser", function() {
 		expect(res.json.notCalled).to.be.true;
 	});
 
-	it("should delete user and associated data if user is superadmin", async function() {
+	it("should delete user and associated data if user is superadmin", async function () {
 		const user = {
 			_id: "user_id",
 			email: "test@example.com",
@@ -882,7 +880,7 @@ describe("Auth Controller - deleteUser", function() {
 		expect(next.notCalled).to.be.true;
 	});
 
-	it("should delete user if user is not superadmin", async function() {
+	it("should delete user if user is not superadmin", async function () {
 		const user = {
 			_id: "user_id",
 			email: "test@example.com",
@@ -912,7 +910,7 @@ describe("Auth Controller - deleteUser", function() {
 		expect(next.notCalled).to.be.true;
 	});
 
-	it("should handle errors", async function() {
+	it("should handle errors", async function () {
 		const error = new Error("Something went wrong");
 		const SERVICE_NAME = "AuthController";
 		jwt.decode.returns({ email: "test@example.com" });
@@ -925,10 +923,10 @@ describe("Auth Controller - deleteUser", function() {
 	});
 });
 
-describe("Auth Controller - getAllUsers", function() {
+describe("Auth Controller - getAllUsers", function () {
 	let req, res, next;
 
-	beforeEach(function() {
+	beforeEach(function () {
 		req = {
 			db: {
 				getAllUsers: sinon.stub(),
@@ -941,11 +939,11 @@ describe("Auth Controller - getAllUsers", function() {
 		next = sinon.stub();
 	});
 
-	afterEach(function() {
+	afterEach(function () {
 		sinon.restore(); // Restore the original methods after each test
 	});
 
-	it("should return 200 and all users", async function() {
+	it("should return 200 and all users", async function () {
 		const allUsers = [{ id: 1, name: "John Doe" }];
 		req.db.getAllUsers.resolves(allUsers);
 
@@ -963,7 +961,7 @@ describe("Auth Controller - getAllUsers", function() {
 		expect(next.notCalled).to.be.true;
 	});
 
-	it("should call next with error when an exception occurs", async function() {
+	it("should call next with error when an exception occurs", async function () {
 		const error = new Error("Something went wrong");
 		req.db.getAllUsers.rejects(error);
 		await getAllUsers(req, res, next);

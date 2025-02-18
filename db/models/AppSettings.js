@@ -22,11 +22,6 @@ const AppSettingsSchema = mongoose.Schema(
 			required: true,
 			default: "my_secret",
 		},
-		refreshTokenSecret: {
-			type: String,
-			required: true,
-			default: "my_refresh_secret",
-		},
 		dbType: {
 			type: String,
 			required: true,
@@ -50,11 +45,6 @@ const AppSettingsSchema = mongoose.Schema(
 			type: String,
 			required: true,
 			default: "2h",
-		},
-		refreshTokenTTL: {
-			type: String,
-			required: true,
-			default: "7d",
 		},
 		pagespeedApiKey: {
 			type: String,

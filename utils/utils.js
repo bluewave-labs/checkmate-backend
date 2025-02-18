@@ -27,9 +27,4 @@ const getTokenFromHeaders = (headers) => {
 	return parts[1];
 };
 
-const tokenType = Object.freeze({
-	ACCESS_TOKEN: "Access token",
-	REFRESH_TOKEN: "Refresh token",
-});
-
-export { ParseBoolean, getTokenFromHeaders, tokenType };
+export { ParseBoolean, getTokenFromHeaders };

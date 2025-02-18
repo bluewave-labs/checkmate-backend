@@ -39,59 +39,19 @@ const verifyJWT = (req, res, next) => {
 	const { jwtSecret } = ServiceRegistry.get(SettingsService.SERVICE_NAME).getSettings();
 	jwt.verify(parsedToken, jwtSecret, (err, decoded) => {
 		if (err) {
-			if (err.name === "TokenExpiredError") {
-				// token has expired
-				handleExpiredJwtToken(req, res, next);
-			} else {
-				// Invalid token (signature or token altered or other issue)
-				const errorMessage = stringService.invalidAuthToken;
+			if (err) {
+				const errorMessage =
+					err.name === "TokenExpiredError"
+						? stringService.expiredAuthToken
+						: stringService.invalidAuthToken;
 				return res.status(401).json({ success: false, msg: errorMessage });
 			}
 		} else {
-			// Token is valid and not expired, carry on with request, Add the decoded payload to the request
+			// Token is valid, carry on
 			req.user = decoded;
 			next();
 		}
 	});
 };
-
-function handleExpiredJwtToken(req, res, next) {
-	const stringService = ServiceRegistry.get(StringService.SERVICE_NAME);
-	// check for refreshToken
-	const refreshToken = req.headers["x-refresh-token"];
-
-	if (!refreshToken) {
-		// No refresh token provided
-		const error = new Error(stringService.noRefreshToken);
-		error.status = 401;
-		error.service = SERVICE_NAME;
-		error.method = "handleExpiredJwtToken";
-		return next(error);
-	}
-
-	// Verify refresh token
-	const { refreshTokenSecret } = ServiceRegistry.get(
-		SettingsService.SERVICE_NAME
-	).getSettings();
-	jwt.verify(refreshToken, refreshTokenSecret, (refreshErr, refreshDecoded) => {
-		if (refreshErr) {
-			// Invalid or expired refresh token, trigger logout
-			const errorMessage =
-				refreshErr.name === "TokenExpiredError"
-					? stringService.expiredRefreshToken
-					: stringService.invalidRefreshToken;
-			const error = new Error(errorMessage);
-			error.status = 401;
-			error.service = SERVICE_NAME;
-			return next(error);
-		}
-
-		// Refresh token is valid and unexpired, request for new access token
-		res.status(403).json({
-			success: false,
-			msg: stringService.requestNewAccessToken,
-		});
-	});
-}
 
 export { verifyJWT };

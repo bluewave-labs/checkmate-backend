@@ -21,7 +21,6 @@ class AuthRoutes {
 			this.authController.registerUser
 		);
 		this.router.post("/login", this.authController.loginUser);
-		this.router.post("/refresh", this.authController.refreshAuthToken);
 
 		this.router.put(
 			"/user/:userId",

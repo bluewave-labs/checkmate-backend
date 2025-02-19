@@ -1,4 +1,4 @@
-<h1 align="center"><a href="https://bluewavelabs.ca" target="_blank">Checkmate Backend</a></h1>
+<h1 align="center"><a href="https://bluewavelabs.ca" target="_blank">Checkmate backend</a></h1>
 
 <p align="center"><strong>The backend service for Checkmate, an open-source uptime and infrastructure monitoring application</strong></p>
 

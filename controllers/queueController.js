@@ -57,5 +57,18 @@ class JobQueueController {
 			return;
 		}
 	};
+
+	flushQueue = async (req, res, next) => {
+		try {
+			const result = await this.jobQueue.flushQueue();
+			return res.success({
+				msg: this.stringService.jobQueueFlush,
+				data: result,
+			});
+		} catch (error) {
+			next(handleError(error, SERVICE_NAME, "flushQueue"));
+			return;
+		}
+	};
 }
 export default JobQueueController;

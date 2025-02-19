@@ -11,6 +11,7 @@ class QueueRoutes {
 		this.router.get("/jobs", this.queueController.getJobs);
 		this.router.post("/jobs", this.queueController.addJob);
 		this.router.post("/obliterate", this.queueController.obliterateQueue);
+		this.router.post("/flush", this.queueController.flushQueue);
 	}
 
 	getRouter() {

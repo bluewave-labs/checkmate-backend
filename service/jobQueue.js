@@ -1,3 +1,5 @@
+import IORedis from "ioredis";
+
 const QUEUE_NAMES = ["uptime", "pagespeed", "hardware", "distributed"];
 const SERVICE_NAME = "JobQueue";
 const JOBS_PER_WORKER = 5;
@@ -11,7 +13,6 @@ const QUEUE_LOOKUP = {
 	distributed_http: "distributed",
 };
 const getSchedulerId = (monitor) => `scheduler:${monitor.type}:${monitor._id}`;
-
 
 class NewJobQueue {
 	static SERVICE_NAME = SERVICE_NAME;
@@ -29,15 +30,16 @@ class NewJobQueue {
 	) {
 		const settings = settingsService.getSettings() || {};
 		const { redisHost = "127.0.0.1", redisPort = 6379 } = settings;
-		const connection = {
+		const redisConnection = new IORedis({
 			host: redisHost,
 			port: redisPort,
-		};
+			maxRetriesPerRequest: null,
+		});
 
 		this.queues = {};
 		this.workers = {};
 
-		this.connection = connection;
+		this.connection = redisConnection;
 		this.db = db;
 		this.networkService = networkService;
 		this.statusService = statusService;
@@ -48,7 +50,7 @@ class NewJobQueue {
 		this.stringService = stringService;
 
 		QUEUE_NAMES.forEach((name) => {
-			this.queues[name] = new Queue(name, { connection });
+			this.queues[name] = new Queue(name, redisConnection);
 			this.workers[name] = [];
 		});
 	}
@@ -598,6 +600,70 @@ class NewJobQueue {
 		} catch (error) {
 			error.service === undefined ? (error.service = SERVICE_NAME) : null;
 			error.method === undefined ? (error.method = "obliterate") : null;
+			throw error;
+		}
+	}
+
+	async getKeyValuePairs() {
+		try {
+			// Get all keys
+			const keys = await this.connection.keys("*");
+
+			if (keys.length === 0) {
+				return {}; // Return an empty object if no keys are found
+			}
+
+			// Get values for all keys
+			const values = await this.connection.mget(keys);
+
+			// Combine keys and values into an object
+			const keyValuePairs = keys.reduce((result, key, index) => {
+				result[key] = values[index];
+				return result;
+			}, {});
+			this.logger.info({
+				message: "Redis key-value",
+				service: SERVICE_NAME,
+				method: "flushQueue",
+				details: keyValuePairs,
+			});
+			return keyValuePairs;
+		} catch (error) {
+			error.service === undefined ? (error.service = SERVICE_NAME) : null;
+			error.method === undefined ? (error.method = "getKeyValuePairs") : null;
+			throw error;
+		}
+	}
+	async flushQueue() {
+		try {
+			const keyValuePairs = await this.getKeyValuePairs();
+			this.logger.info({
+				message: "Before flush",
+				service: SERVICE_NAME,
+				method: "flushQueue",
+				details: keyValuePairs,
+			});
+			const flushResult = await this.connection.flushall();
+			const keyValuePairsAfter = await this.getKeyValuePairs();
+			this.logger.info({
+				message: "After flush",
+				service: SERVICE_NAME,
+				method: "flushQueue",
+				details: keyValuePairsAfter,
+			});
+			if (flushResult !== "OK") {
+				throw new Error("Failed to flush queue");
+			}
+			await this.initJobQueue();
+			return {
+				keyValuePairs,
+				flush: flushResult,
+				keyValuePairsAfter,
+				init: true,
+			};
+		} catch (error) {
+			error.service === undefined ? (error.service = SERVICE_NAME) : null;
+			error.method === undefined ? (error.method = "flushQueue") : null;
 			throw error;
 		}
 	}

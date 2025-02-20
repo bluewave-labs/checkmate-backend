@@ -561,6 +561,16 @@ const buildDistributedUptimeDetailsPipeline = (monitor, dates, dateString) => {
 							totalChecks: {
 								$sum: 1,
 							},
+							downChecks: {
+								$sum: {
+									$cond: [{ $eq: ["$status", false] }, 1, 0],
+								},
+							},
+							upChecks: {
+								$sum: {
+									$cond: [{ $eq: ["$status", true] }, 1, 0],
+								},
+							},
 							uptBurnt: {
 								$sum: "$uptBurnt",
 							},
@@ -679,6 +689,18 @@ const buildDistributedUptimeDetailsPipeline = (monitor, dates, dateString) => {
 				},
 				totalChecks: {
 					$arrayElemAt: ["$aggregateData.totalChecks", 0],
+				},
+				totalUpChecks: {
+					$arrayElemAt: ["$aggregateData.upChecks", 0],
+				},
+				totalDownChecks: {
+					$arrayElemAt: ["$aggregateData.downChecks", 0],
+				},
+				totalUptime: {
+					$divide: [
+						{ $arrayElemAt: ["$aggregateData.upChecks", 0] },
+						{ $arrayElemAt: ["$aggregateData.totalChecks", 0] },
+					],
 				},
 				latestResponseTime: {
 					$arrayElemAt: ["$aggregateData.lastCheck.responseTime", 0],

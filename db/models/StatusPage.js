@@ -47,6 +47,13 @@ const StatusPageSchema = mongoose.Schema(
 				required: true,
 			},
 		],
+		subMonitors: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: "Monitor",
+				required: true,
+			},
+		],
 		logo: {
 			data: Buffer,
 			contentType: String,

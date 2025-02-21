@@ -6,6 +6,7 @@ import StringService from "../../../service/stringService.js";
 const SERVICE_NAME = "statusPageModule";
 
 const createStatusPage = async (statusPageData, image) => {
+	console.log(statusPageData);
 	const stringService = ServiceRegistry.get(StringService.SERVICE_NAME);
 
 	try {

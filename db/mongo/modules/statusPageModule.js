@@ -1,4 +1,5 @@
 import StatusPage from "../../models/StatusPage.js";
+import Monitor from "../../models/Monitor.js";
 import { NormalizeData } from "../../../utils/dataUtils.js";
 import ServiceRegistry from "../../../service/serviceRegistry.js";
 import StringService from "../../../service/stringService.js";
@@ -6,7 +7,6 @@ import StringService from "../../../service/stringService.js";
 const SERVICE_NAME = "statusPageModule";
 
 const createStatusPage = async (statusPageData, image) => {
-	console.log(statusPageData);
 	const stringService = ServiceRegistry.get(StringService.SERVICE_NAME);
 
 	try {
@@ -39,6 +39,10 @@ const updateStatusPage = async (statusPageData, image) => {
 				contentType: image.mimetype,
 			};
 		}
+
+		if (statusPageData.deleteSubmonitors === "true") {
+			statusPageData.subMonitors = [];
+		}
 		const statusPage = await StatusPage.findOneAndUpdate(
 			{ url: statusPageData.url },
 			statusPageData,
@@ -56,10 +60,56 @@ const updateStatusPage = async (statusPageData, image) => {
 };
 
 const getStatusPageByUrl = async (url, type) => {
+	const stringService = ServiceRegistry.get(StringService.SERVICE_NAME);
 	try {
 		if (type === "distributed") {
-			const statusPage = await StatusPage.aggregate([{ $match: { url } }]);
-			return statusPage[0];
+			const statusPage = await StatusPage.findOne({ url }).lean();
+
+			if (!statusPage) {
+				const error = new Error(stringService.statusPageNotFound);
+				error.status = 404;
+				throw error;
+			}
+
+			// No sub monitors, return status page
+			if (statusPage.subMonitors.length === 0) {
+				return statusPage;
+			}
+			// Sub monitors, return status page with sub monitors
+			const subMonitors = await Monitor.aggregate([
+				{ $match: { _id: { $in: statusPage.subMonitors } } },
+				{
+					$addFields: {
+						orderIndex: { $indexOfArray: [statusPage.subMonitors, "$_id"] },
+					},
+				},
+				{
+					$lookup: {
+						from: "checks",
+						let: { monitorId: "$_id" },
+						pipeline: [
+							{
+								$match: {
+									$expr: { $eq: ["$monitorId", "$$monitorId"] },
+								},
+							},
+							{ $sort: { createdAt: -1 } },
+							{ $limit: 25 },
+						],
+						as: "checks",
+					},
+				},
+				{ $sort: { orderIndex: 1 } },
+				{ $project: { orderIndex: 0 } },
+			]);
+
+			const normalizedSubMonitors = subMonitors.map((monitor) => {
+				return {
+					...monitor,
+					checks: NormalizeData(monitor.checks, 10, 100),
+				};
+			});
+			return { ...statusPage, subMonitors: normalizedSubMonitors };
 		} else {
 			return getStatusPage(url);
 		}
@@ -71,8 +121,6 @@ const getStatusPageByUrl = async (url, type) => {
 };
 
 const getStatusPagesByTeamId = async (teamId) => {
-	const stringService = ServiceRegistry.get(StringService.SERVICE_NAME);
-
 	try {
 		const statusPages = await StatusPage.find({ teamId });
 		return statusPages;

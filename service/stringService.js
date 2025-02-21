@@ -189,9 +189,9 @@ class StringService {
   }
 
   getMonitorStatus(name, status, url) {
-      return this.translationService.getTranslation('monitorStatus')
+      const translationKey = status ? 'monitorStatusUp' : 'monitorStatusDown';
+      return this.translationService.getTranslation(translationKey)
           .replace('{name}', name)
-          .replace('{status}', status ? "up" : "down")
           .replace('{url}', url);
   }
 

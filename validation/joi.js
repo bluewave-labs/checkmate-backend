@@ -538,6 +538,9 @@ const imageValidation = joi
 		}),
 		config: webhookConfigValidation.required().messages({
 			'any.required': 'Webhook configuration is required'
+		}),
+		status: joi.boolean().default(false).messages({
+			'boolean.base': 'Status must be a boolean value'
 		})
 	});
 

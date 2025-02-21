@@ -450,6 +450,7 @@ const createStatusPageBodyValidation = joi.object({
 		.array()
 		.items(joi.string().pattern(/^[0-9a-fA-F]{24}$/))
 		.optional(),
+	deleteSubmonitors: joi.boolean().optional(),
 	isPublished: joi.boolean(),
 	showCharts: joi.boolean().optional(),
 	showUptimePercentage: joi.boolean(),

@@ -426,6 +426,7 @@ const getStatusPageParamValidation = joi.object({
 
 const getStatusPageQueryValidation = joi.object({
 	type: joi.string().valid("uptime", "distributed").required(),
+	timeFrame: joi.number().optional(),
 });
 
 const createStatusPageBodyValidation = joi.object({

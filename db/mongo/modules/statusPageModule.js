@@ -59,60 +59,109 @@ const updateStatusPage = async (statusPageData, image) => {
 	}
 };
 
-const getStatusPageByUrl = async (url, type) => {
+const getDistributedStatusPageByUrl = async ({ url, daysToShow = 30 }) => {
 	const stringService = ServiceRegistry.get(StringService.SERVICE_NAME);
 	try {
-		if (type === "distributed") {
-			const statusPage = await StatusPage.findOne({ url }).lean();
+		const statusPage = await StatusPage.findOne({ url }).lean();
 
-			if (!statusPage) {
-				const error = new Error(stringService.statusPageNotFound);
-				error.status = 404;
-				throw error;
-			}
+		if (!statusPage) {
+			const error = new Error(stringService.statusPageNotFound);
+			error.status = 404;
+			throw error;
+		}
 
-			// No sub monitors, return status page
-			if (statusPage.subMonitors.length === 0) {
-				return statusPage;
-			}
-			// Sub monitors, return status page with sub monitors
-			const subMonitors = await Monitor.aggregate([
-				{ $match: { _id: { $in: statusPage.subMonitors } } },
-				{
-					$addFields: {
-						orderIndex: { $indexOfArray: [statusPage.subMonitors, "$_id"] },
-					},
+		// No sub monitors, return status page
+		if (statusPage.subMonitors.length === 0) {
+			return statusPage;
+		}
+		// Sub monitors, return status page with sub monitors
+		const daysAgo = new Date();
+		daysAgo.setDate(daysAgo.getDate() - daysToShow);
+
+		const subMonitors = await Monitor.aggregate([
+			{ $match: { _id: { $in: statusPage.subMonitors } } },
+			{
+				$addFields: {
+					orderIndex: { $indexOfArray: [statusPage.subMonitors, "$_id"] },
 				},
-				{
-					$lookup: {
-						from: "checks",
-						let: { monitorId: "$_id" },
-						pipeline: [
-							{
-								$match: {
-									$expr: { $eq: ["$monitorId", "$$monitorId"] },
+			},
+
+			// Return 30 days of checks by default
+			{
+				$lookup: {
+					from: "checks",
+					let: { monitorId: "$_id" },
+					pipeline: [
+						{
+							$match: {
+								$expr: {
+									$and: [
+										{ $eq: ["$monitorId", "$$monitorId"] },
+										{ $gte: ["$createdAt", daysAgo] },
+									],
 								},
 							},
-							{ $sort: { createdAt: -1 } },
-							{ $limit: 25 },
-						],
-						as: "checks",
-					},
+						},
+						{
+							$group: {
+								_id: {
+									$dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+								},
+								responseTime: {
+									$avg: "$responseTime",
+								},
+								trueCount: {
+									$sum: {
+										$cond: [{ $eq: ["$status", true] }, 1, 0],
+									},
+								},
+								totalCount: {
+									$sum: 1,
+								},
+							},
+						},
+						{
+							$project: {
+								_id: 1,
+								responseTime: 1,
+								upPercentage: {
+									$cond: [
+										{ $eq: ["$totalCount", 0] },
+										0,
+										{ $multiply: [{ $divide: ["$trueCount", "$totalCount"] }, 100] },
+									],
+								},
+							},
+						},
+						{
+							$sort: { _id: -1 },
+						},
+					],
+					as: "checks",
 				},
-				{ $sort: { orderIndex: 1 } },
-				{ $project: { orderIndex: 0 } },
-			]);
+			},
+			{ $sort: { orderIndex: 1 } },
+			{ $project: { orderIndex: 0 } },
+		]);
 
-			const normalizedSubMonitors = subMonitors.map((monitor) => {
-				return {
-					...monitor,
-					checks: NormalizeData(monitor.checks, 10, 100),
-				};
-			});
-			return { ...statusPage, subMonitors: normalizedSubMonitors };
-		} else {
-			return getStatusPage(url);
-		}
+		const normalizedSubMonitors = subMonitors.map((monitor) => {
+			return {
+				...monitor,
+				checks: NormalizeData(monitor.checks, 10, 100),
+			};
+		});
+		return { ...statusPage, subMonitors: normalizedSubMonitors };
+	} catch (error) {
+		error.service = SERVICE_NAME;
+		error.method = "getDistributedStatusPageByUrl";
+		throw error;
+	}
+};
+
+const getStatusPageByUrl = async (url, type) => {
+	// TODO This is deprecated, can remove and have controller call getStatusPage
+	try {
+		return getStatusPage(url);
 	} catch (error) {
 		error.service = SERVICE_NAME;
 		error.method = "getStatusPageByUrl";
@@ -255,6 +304,7 @@ export {
 	getStatusPagesByTeamId,
 	getStatusPage,
 	getStatusPageByUrl,
+	getDistributedStatusPageByUrl,
 	deleteStatusPage,
 	deleteStatusPagesByMonitorId,
 };

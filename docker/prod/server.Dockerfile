@@ -4,11 +4,11 @@ ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 WORKDIR /app
 
-COPY ./Server/package*.json ./
+COPY ../../../server/package*.json ./
 
 RUN npm install
 
-COPY ./Server/ ./
+COPY ../../../server/ ./
 
 EXPOSE 5000
 

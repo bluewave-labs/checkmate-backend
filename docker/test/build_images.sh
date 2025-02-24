@@ -2,7 +2,7 @@
 
 # Change directory to root directory for correct Docker Context
 cd "$(dirname "$0")"
-cd ../..
+cd ../../../
 
 # Define an array of services and their Dockerfiles
 declare -A services=(

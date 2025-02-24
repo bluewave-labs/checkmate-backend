@@ -413,7 +413,7 @@ class NetworkService {
 				throw new Error(response.data.message);
 			}
 		} catch (error) {
-			console.log(error.message);
+			console.log(error);
 			error.service = this.SERVICE_NAME;
 			error.method = "requestDistributedHttp";
 			throw error;
@@ -437,41 +437,39 @@ class NetworkService {
 		try {
 			const response = await this.axios.post(url, message, {
 				headers: {
-					'Content-Type': 'application/json'
-				}
+					"Content-Type": "application/json",
+				},
 			});
-	
+
 			return {
-				type: 'webhook',
+				type: "webhook",
 				status: true,
 				code: response.status,
 				message: `Successfully sent ${platform} notification`,
-				payload: response.data
+				payload: response.data,
 			};
-	
 		} catch (error) {
 			this.logger.warn({
 				message: error.message,
 				service: this.SERVICE_NAME,
-				method: 'requestWebhook',
+				method: "requestWebhook",
 				url,
 				platform,
 				error: error.message,
 				statusCode: error.response?.status,
 				responseData: error.response?.data,
-				requestPayload: message
+				requestPayload: message,
 			});
-	
+
 			return {
-				type: 'webhook',
+				type: "webhook",
 				status: false,
 				code: error.response?.status || this.NETWORK_ERROR,
 				message: `Failed to send ${platform} notification`,
-				payload: error.response?.data
+				payload: error.response?.data,
 			};
 		}
 	}
-	
 
 	/**
 	 * Gets the status of a job based on its type and returns the appropriate response.

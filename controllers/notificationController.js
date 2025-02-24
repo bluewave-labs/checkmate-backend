@@ -24,13 +24,13 @@ class NotificationController {
         }
     
         try {
-            const { monitorId, type, platform, config } = req.body;
+            const { monitorId, type, platform, config, status = false } = req.body;
     
             const networkResponse = {
                 monitor: { _id: monitorId, name: "Test Monitor", url: "http://www.google.com" },
-                status: false,
+                status: status, 
                 statusChanged: true,
-                prevStatus: true,
+                prevStatus: !status, 
             };
     
             if (type === "webhook") {

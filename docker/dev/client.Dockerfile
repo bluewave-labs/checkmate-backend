@@ -14,11 +14,11 @@ RUN apk add --no-cache \
     eudev-dev
 
 
-COPY ../../Client/package*.json ./
+COPY ../../client/package*.json ./
 
 RUN npm install
 
-COPY ../../Client .
+COPY ../../client .
 
 RUN npm run build-dev
 

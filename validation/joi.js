@@ -426,6 +426,7 @@ const getStatusPageParamValidation = joi.object({
 
 const getStatusPageQueryValidation = joi.object({
 	type: joi.string().valid("uptime", "distributed").required(),
+	timeFrame: joi.number().optional(),
 });
 
 const createStatusPageBodyValidation = joi.object({
@@ -446,6 +447,11 @@ const createStatusPageBodyValidation = joi.object({
 			"array.empty": "At least one monitor is required",
 			"any.required": "Monitors are required",
 		}),
+	subMonitors: joi
+		.array()
+		.items(joi.string().pattern(/^[0-9a-fA-F]{24}$/))
+		.optional(),
+	deleteSubmonitors: joi.boolean().optional(),
 	isPublished: joi.boolean(),
 	showCharts: joi.boolean().optional(),
 	showUptimePercentage: joi.boolean(),
@@ -475,74 +481,73 @@ const imageValidation = joi
 		"any.required": "Image file is required",
 	});
 
-	const webhookConfigValidation = joi.object({
-		webhookUrl: joi.string().uri()
-		  .when('$platform', {
-			switch: [
-			  {
-				is: 'telegram',
-				then: joi.optional()
-			  },
-			  {
-				is: 'discord',
-				then: joi.required().messages({
-				  'string.empty': 'Discord webhook URL is required',
-				  'string.uri': 'Discord webhook URL must be a valid URL',
-				  'any.required': 'Discord webhook URL is required'
-				})
-			  },
-			  {
-				is: 'slack',
-				then: joi.required().messages({
-				  'string.empty': 'Slack webhook URL is required',
-				  'string.uri': 'Slack webhook URL must be a valid URL',
-				  'any.required': 'Slack webhook URL is required'
-				})
-			  }
-			]
-		  }),
-		botToken: joi.string()
-		  .when('$platform', {
-			is: 'telegram',
-			then: joi.required().messages({
-			  'string.empty': 'Telegram bot token is required',
-			  'any.required': 'Telegram bot token is required'
+const webhookConfigValidation = joi
+	.object({
+		webhookUrl: joi
+			.string()
+			.uri()
+			.when("$platform", {
+				switch: [
+					{
+						is: "telegram",
+						then: joi.optional(),
+					},
+					{
+						is: "discord",
+						then: joi.required().messages({
+							"string.empty": "Discord webhook URL is required",
+							"string.uri": "Discord webhook URL must be a valid URL",
+							"any.required": "Discord webhook URL is required",
+						}),
+					},
+					{
+						is: "slack",
+						then: joi.required().messages({
+							"string.empty": "Slack webhook URL is required",
+							"string.uri": "Slack webhook URL must be a valid URL",
+							"any.required": "Slack webhook URL is required",
+						}),
+					},
+				],
 			}),
-			otherwise: joi.optional()
-		  }),
-		chatId: joi.string()
-		  .when('$platform', {
-			is: 'telegram',
+		botToken: joi.string().when("$platform", {
+			is: "telegram",
 			then: joi.required().messages({
-			  'string.empty': 'Telegram chat ID is required',
-			  'any.required': 'Telegram chat ID is required'
+				"string.empty": "Telegram bot token is required",
+				"any.required": "Telegram bot token is required",
 			}),
-			otherwise: joi.optional()
-		  })
-	  }).required();
-	
-	  const triggerNotificationBodyValidation = joi.object({
-		monitorId: joi.string().required().messages({
-			'string.empty': 'Monitor ID is required',
-			'any.required': 'Monitor ID is required'
+			otherwise: joi.optional(),
 		}),
-		type: joi.string().valid('webhook').required().messages({
-			'string.empty': 'Notification type is required',
-			'any.required': 'Notification type is required',
-			'any.only': 'Notification type must be webhook'
+		chatId: joi.string().when("$platform", {
+			is: "telegram",
+			then: joi.required().messages({
+				"string.empty": "Telegram chat ID is required",
+				"any.required": "Telegram chat ID is required",
+			}),
+			otherwise: joi.optional(),
 		}),
-		platform: joi.string().valid('telegram', 'discord', 'slack').required().messages({
-			'string.empty': 'Platform type is required',
-			'any.required': 'Platform type is required',
-			'any.only': 'Platform must be telegram, discord, or slack'
-		}),
-		config: webhookConfigValidation.required().messages({
-			'any.required': 'Webhook configuration is required'
-		}),
-		status: joi.boolean().default(false).messages({
-			'boolean.base': 'Status must be a boolean value'
-		})
-	});
+	})
+	.required();
+
+const triggerNotificationBodyValidation = joi.object({
+	monitorId: joi.string().required().messages({
+		"string.empty": "Monitor ID is required",
+		"any.required": "Monitor ID is required",
+	}),
+	type: joi.string().valid("webhook").required().messages({
+		"string.empty": "Notification type is required",
+		"any.required": "Notification type is required",
+		"any.only": "Notification type must be webhook",
+	}),
+	platform: joi.string().valid("telegram", "discord", "slack").required().messages({
+		"string.empty": "Platform type is required",
+		"any.required": "Platform type is required",
+		"any.only": "Platform must be telegram, discord, or slack",
+	}),
+	config: webhookConfigValidation.required().messages({
+		"any.required": "Webhook configuration is required",
+	}),
+});
 
 export {
 	roleValidatior,
@@ -602,7 +607,7 @@ export {
 	createStatusPageBodyValidation,
 	getStatusPageParamValidation,
 	getStatusPageQueryValidation,
-	imageValidation, 
+	imageValidation,
 	triggerNotificationBodyValidation,
-    webhookConfigValidation,
+	webhookConfigValidation,
 };

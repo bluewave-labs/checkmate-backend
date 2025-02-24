@@ -1,3 +1,4 @@
+
 <h1 align="center"><a href="https://bluewavelabs.ca" target="_blank">Checkmate backend</a></h1>
 
 <p align="center"><strong>The backend service for Checkmate, an open source uptime and infrastructure monitoring application</strong></p>
@@ -14,3 +15,4 @@ For setup instructions, configuration details, and deployment guidelines, please
 
 - [Checkmate Frontend](https://github.com/bluewave-labs/checkmate-frontend)
 - [Capture Agent](https://github.com/bluewave-labs/capture) (Optional, provides additional server insights)
+

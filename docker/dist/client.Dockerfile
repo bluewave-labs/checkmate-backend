@@ -13,7 +13,6 @@ RUN apk add --no-cache \
     libusb-dev \
     eudev-dev
 
-
 COPY ./client/package*.json ./
 
 RUN npm install
@@ -21,7 +20,6 @@ RUN npm install
 COPY ./client .
 
 RUN npm run build
-
 
 FROM nginx:1.27.1-alpine
 

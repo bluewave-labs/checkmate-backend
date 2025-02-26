@@ -116,6 +116,10 @@ class StringService {
     return this.translationService.getTranslation('monitorCreate');
   }
 
+  get bulkMonitorsCreate() {
+    return this.translationService.getTranslation('bulkMonitorsCreate');
+  }
+
   get monitorEdit() {
     return this.translationService.getTranslation('monitorEdit');
   }

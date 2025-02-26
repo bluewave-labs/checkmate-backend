@@ -199,6 +199,8 @@ const createMonitorBodyValidation = joi.object({
 	matchMethod: joi.string(),
 });
 
+const createMonitorsBodyValidation = joi.array().items(createMonitorBodyValidation);
+
 const editMonitorBodyValidation = joi.object({
 	name: joi.string(),
 	description: joi.string(),
@@ -560,6 +562,7 @@ export {
 	inviteBodyValidation,
 	inviteVerificationBodyValidation,
 	createMonitorBodyValidation,
+	createMonitorsBodyValidation,
 	getMonitorByIdParamValidation,
 	getMonitorByIdQueryValidation,
 	getMonitorsByTeamIdParamValidation,

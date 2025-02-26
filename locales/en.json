@@ -117,6 +117,7 @@
   "monitorGetByTeamId": "Got monitors by Team Id successfully",
   "monitorGetByUserIdSuccess": "Got monitor for ${userId} successfully",
   "monitorCreate": "Monitor created successfully",
+  "bulkMonitorsCreate": "Monitors created successfully",
   "monitorDelete": "Monitor deleted successfully",
   "monitorEdit": "Monitor edited successfully",
   "monitorCertificate": "Got monitor certificate successfully",

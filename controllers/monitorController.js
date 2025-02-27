@@ -4,6 +4,7 @@ import {
 	getMonitorsByTeamIdParamValidation,
 	getMonitorsByTeamIdQueryValidation,
 	createMonitorBodyValidation,
+	createMonitorsBodyValidation,
 	getMonitorURLByQueryValidation,
 	editMonitorBodyValidation,
 	pauseMonitorParamValidation,
@@ -240,6 +241,56 @@ class MonitorController {
 	};
 
 	/**
+	 * Creates bulk monitors and adds them to the job queue.
+	 * @async
+	 * @param {Object} req - The Express request object.
+	 * @property {Object} req.body - The body of the request.
+	 * @param {Object} res - The Express response object.
+	 * @param {function} next - The next middleware function.
+	 * @returns {Object} The response object with a success status, a message indicating the creation of the monitor, and the created monitor data.
+	 * @throws {Error} If there is an error during the process, especially if there is a validation error (422).
+	 */
+	createBulkMonitors = async (req, res, next) => {
+		try {
+			await createMonitorsBodyValidation.validateAsync(req.body);
+		} catch (error) {
+			next(handleValidationError(error, SERVICE_NAME));
+			return;
+		}
+
+		try {
+			// create monitors
+			const monitors = await this.db.createBulkMonitors(req);
+
+			// create notifications for each monitor
+			await Promise.all(monitors.map(async (monitor, index) => {
+				const notifications = req.body[index].notifications;
+
+				if (notifications?.length) {
+					monitor.notifications = await Promise.all(
+						notifications.map(async (notification) => {
+							notification.monitorId = monitor._id;
+							return await this.db.createNotification(notification);
+						})
+					);
+					await monitor.save();
+				}
+
+				// Add monitor to job queue
+				this.jobQueue.addJob(monitor._id, monitor);
+			}));
+
+			return res.success({
+				msg: this.stringService.bulkMonitorsCreate,
+				data: monitors,
+			});
+
+		} catch (error) {
+			next(handleError(error, SERVICE_NAME, "createBulkMonitors"));
+		}
+	};
+
+	/**
 	 * Checks if the endpoint can be resolved
 	 * @async
 	 * @param {Object} req - The Express request object.
@@ -427,10 +478,10 @@ class MonitorController {
 
 			await Promise.all(
 				notifications &&
-					notifications.map(async (notification) => {
-						notification.monitorId = editedMonitor._id;
-						await this.db.createNotification(notification);
-					})
+				notifications.map(async (notification) => {
+					notification.monitorId = editedMonitor._id;
+					await this.db.createNotification(notification);
+				})
 			);
 
 			// Delete the old job(editedMonitor has the same ID as the old monitor)

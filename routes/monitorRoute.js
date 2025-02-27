@@ -76,6 +76,12 @@ class MonitorRoutes {
 			this.monitorController.addDemoMonitors
 		);
 
+		this.router.post(
+			"/bulk",
+			isAllowed(["admin", "superadmin"]),
+			this.monitorController.createBulkMonitors
+		);
+
 		this.router.post("/seed", isAllowed(["superadmin"]), this.monitorController.seedDb);
 	}
 

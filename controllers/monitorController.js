@@ -274,10 +274,10 @@ class MonitorController {
 						})
 					);
 					await monitor.save();
-
-					// Add monitor to job queue
-					this.jobQueue.addJob(monitor._id, monitor);
 				}
+
+				// Add monitor to job queue
+				this.jobQueue.addJob(monitor._id, monitor);
 			}));
 
 			return res.success({

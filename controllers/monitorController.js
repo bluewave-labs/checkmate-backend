@@ -286,7 +286,7 @@ class MonitorController {
 			});
 
 		} catch (error) {
-			next(handleError(error, SERVICE_NAME, "batchCreateMonitor"));
+			next(handleError(error, SERVICE_NAME, "createBulkMonitors"));
 		}
 	};
 

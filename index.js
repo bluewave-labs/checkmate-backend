@@ -170,7 +170,13 @@ const startApp = async () => {
 		logger
 	);
 	const statusService = new StatusService(db, logger);
-	const notificationService = new NotificationService(emailService, db, logger, networkService, stringService);
+	const notificationService = new NotificationService(
+		emailService,
+		db,
+		logger,
+		networkService,
+		stringService
+	);
 
 	const jobQueue = new JobQueue(
 		db,
@@ -286,6 +292,7 @@ const startApp = async () => {
 	// Init job queue
 	await jobQueue.initJobQueue();
 	// Middleware
+	app.use(responseHandler);
 	app.use(cors());
 	app.use(express.json());
 	app.use(helmet());
@@ -294,7 +301,6 @@ const startApp = async () => {
 	app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
 	//routes
-	app.use(responseHandler);
 
 	app.use("/api/v1/auth", authRoutes.getRouter());
 	app.use("/api/v1/settings", verifyJWT, settingsRoutes.getRouter());

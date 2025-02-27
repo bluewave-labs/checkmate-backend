@@ -281,7 +281,7 @@ class MonitorController {
 			}));
 
 			return res.success({
-				msg: this.stringService.monitorCreate,
+				msg: this.stringService.bulkMonitorsCreate,
 				data: monitors,
 			});
 

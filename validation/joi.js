@@ -35,16 +35,21 @@ const loginValidation = joi.object({
 		}),
 	password: joi.string().min(8).required().pattern(passwordPattern),
 });
+const nameValidation = joi
+	.string()
+	.trim()
+	.max(50)
+	.pattern(/^(?=.*[\p{L}\p{Sc}])[\p{L}\p{Sc}\s']+$/u)
+	.messages({
+		"string.empty": "Name is required",
+		"string.max": "Name must be less than 50 characters",
+		"string.pattern.base":
+			"Name must contain at least 1 letter or currency symbol and only allow letters, spaces, apostrophes, and currency symbols",
+	});
 
 const registrationBodyValidation = joi.object({
-	firstName: joi
-		.string()
-		.required()
-		.pattern(/^[A-Za-z]+$/),
-	lastName: joi
-		.string()
-		.required()
-		.pattern(/^[A-Za-z]+$/),
+	firstName: nameValidation.required(),
+	lastName: nameValidation.required(),
 	email: joi
 		.string()
 		.email()
@@ -72,8 +77,8 @@ const editUserParamValidation = joi.object({
 });
 
 const editUserBodyValidation = joi.object({
-	firstName: joi.string().pattern(/^[A-Za-z]+$/),
-	lastName: joi.string().pattern(/^[A-Za-z]+$/),
+	firstName: nameValidation.required(),
+	lastName: nameValidation.required(),
 	profileImage: joi.any(),
 	newPassword: joi.string().min(8).pattern(passwordPattern),
 	password: joi.string().min(8).pattern(passwordPattern),
